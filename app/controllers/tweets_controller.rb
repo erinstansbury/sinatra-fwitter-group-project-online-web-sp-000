@@ -20,15 +20,12 @@ class TweetsController < ApplicationController
   end
 
   post '/tweets' do
-    if params[:content] == ""
-      redirect '/tweets/new'
-    else
-      @tweet = Tweet.new(:content => params[:content])
-      @user = User.find(session[:user_id])
-      @user.tweets.push(@tweet)
-      @user.save
-      redirect '/tweets'
-    end
+tweet = current_user.tweets.find_by(id: params[:id])
+if tweet && tweet.destroy
+  redirect "/tweets"
+else
+  redirect "/tweets/#{tweet.id}"
+end
   end
 
   get '/tweets/:id' do
