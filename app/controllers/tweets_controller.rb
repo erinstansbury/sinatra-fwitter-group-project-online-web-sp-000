@@ -1,67 +1,100 @@
 class TweetsController < ApplicationController
-  get '/tweets/new' do
+
+  get '/tweets' do 
     if logged_in?
-      erb :'/tweets/create_tweet'
+      @tweets = Tweet.all
+      @user = User.find_by_id(session[:user_id])
+      erb :'tweets/tweets'
+    else  
+      redirect to '/login'       
+    end
+  end 
+
+  get '/tweets/new' do
+    if logged_in? 
+      erb :'tweets/create_tweet'
     else
       redirect to '/login'
-    end
-  end
+    end  
+  end 
 
   post '/tweets' do
-    @tweet = current_user.tweets.create(content: params[:content])
-    if @tweet.valid?
-      redirect to '/tweets'
-    else
-      redirect to '/tweets/new'
+    if params[:content] == nil || params[:content] == "" 
+      redirect to "/tweets/new"
+    else       
+      @tweet = Tweet.create(:content => params[:content], :user_id => session[:user_id])
+      @tweet.user_id = session[:user_id]
+      @tweet.save
+      if params[:phone_number] != ""
+        @client = Twilio::REST::Client.new(ACCOUNT_SID, AUTH_TOKEN)        
+        number = "#{params[:phone_number]}"
+        @client.messages.create(
+          from: 'Number goes here', 
+          to: number,
+          body: params[:content] + "\n - sent by #{@tweet.user.username} from Fwitter"
+          )
+      end
+      redirect to "/tweets/#{@tweet.id}"
     end
   end
-
-  get '/tweets' do
+    
+  get '/tweets/:id' do 
     if logged_in?
-      @user = current_user
-      erb :'/tweets/tweets'
+      @tweet = Tweet.find_by_id(params[:id])
+      @user = User.find_by_id(params[:id])
+      erb :'tweets/show_tweet'
     else
       redirect to '/login'
-    end
-  end
+    end    
+  end   
 
-  get '/tweets/:id' do
+  get '/tweets/:id/edit' do 
     if logged_in?
-      @user = current_user
-      @tweet = Tweet.find(params[:id])
-      erb :'/tweets/show_tweet'
-    else
-      redirect '/login'
-    end
-  end
-
-  get '/tweets/:id/edit' do
-    if logged_in? && current_user.tweets.include?(Tweet.find_by(id: params[:id]))
-      @tweet = Tweet.find(params[:id])
-      erb :'/tweets/edit_tweet' if current_user.tweets.include?(@tweet)
-    else
-      redirect '/login'
-    end
-  end
-
-  patch '/tweets/:id' do
-    if logged_in? && current_user.tweets.include?(Tweet.find_by(id: params[:id]))
-      @tweet = Tweet.find(params[:id])
-      @tweet.update(content: params[:content])
-      if @tweet.valid?
-        redirect to "/tweets/#{@tweet.id}"
+      @tweet = Tweet.find_by_id(params[:id])
+      if self.current_user.id == @tweet.user_id
+        erb :'tweets/edit_tweet'
       else
-        redirect to "/tweets/#{params[:id]}/edit"
+        redirect to '/tweets'  
       end
-    end
+    else
+      redirect to '/login'
+    end 
   end
+
+  patch '/tweets/:id' do 
+    if params[:content] == nil || params[:content] == ""
+      redirect to "/tweets/#{params[:id]}/edit"
+    else   
+      @tweet = Tweet.find_by_id(params[:id])
+      @tweet.content = params[:content]
+      @tweet.save
+      redirect to "/tweets/#{@tweet.id}"
+    end
+  end  
 
   delete '/tweets/:id/delete' do
-    tweet = current_user.tweets.find_by(id: params[:id])
-    if tweet && tweet.destroy
-      redirect to '/tweets'
-    else
-      redirect to "/tweets/#{params[:id]}"
-    end
+    if logged_in?
+      @tweet = Tweet.find_by_id(params[:id])
+      if self.current_user.id == @tweet.user_id
+        @tweet.delete
+        redirect to "/tweets"
+      else
+      redirect to "/tweets"
+      end
+    else 
+      redirect to '/login'    
+    end  
   end
-end
+
+helpers do 
+
+    def logged_in?
+      !!session[:user_id]
+    end
+    
+    def current_user
+      User.find(session[:user_id])
+    end   
+  end  
+
+end  
