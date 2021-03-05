@@ -25,14 +25,6 @@ class TweetsController < ApplicationController
       @tweet = Tweet.create(:content => params[:content], :user_id => session[:user_id])
       @tweet.user_id = session[:user_id]
       @tweet.save
-      if params[:phone_number] != ""
-        @client = Twilio::REST::Client.new(ACCOUNT_SID, AUTH_TOKEN)        
-        number = "#{params[:phone_number]}"
-        @client.messages.create(
-          from: 'Number goes here', 
-          to: number,
-          body: params[:content] + "\n - sent by #{@tweet.user.username} from Fwitter"
-          )
       end
       redirect to "/tweets/#{@tweet.id}"
     end
