@@ -57,15 +57,6 @@ class ApplicationController < Sinatra::Base
     end
   end
 
-  get '/tweets' do
-    if !Helpers.is_logged_in?(session)
-      redirect to '/login'
-    end
-    @tweets = Tweet.all
-    @user = Helpers.current_user(session)
-    erb :"/tweets/tweets"
-  end
-
   get '/users/:slug' do
     slug = params[:slug]
     @user = User.find_by_slug(slug)
